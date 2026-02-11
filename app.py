@@ -33,7 +33,7 @@ def update_last_message_for_chat(safeKey):
         if len(latest_list) > 0:
             data = latest_list[0].to_dict()
             new_message = data.get("message", "")
-            new_time = data.get("time", "")
+            new_time = data.get("timeStamp", "")
 
         details = chat_ref.collection("chat_detail").stream()
 
