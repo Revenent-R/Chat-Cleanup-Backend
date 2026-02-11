@@ -3,6 +3,7 @@ import threading
 from flask import Flask, jsonify
 import firebase_admin
 from firebase_admin import credentials, firestore
+from datetime import datetime,timezone
 
 app = Flask(__name__)
 
@@ -17,7 +18,7 @@ def cleanup():
     print("Running cleanup...")
 
     try:
-        now = firestore.Timestamp.now()
+        now = datetime.now(timezone.utc)
 
         docs = (
             db.collection_group("chat_history")
