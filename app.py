@@ -3,69 +3,78 @@ import threading
 from flask import Flask, jsonify
 import firebase_admin
 from firebase_admin import credentials, firestore
-from datetime import datetime, timezone
 
 app = Flask(__name__)
 
-# 🔐 Firebase Init
-cred = credentials.Certificate("/etc/secrets/serviceAccount.json")
+cred = credentials.Certificate("serviceAccount.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# 🔥 YOUR CLEANUP LOGIC (fixed for subcollection)
+worker_started = False
+worker_lock = threading.Lock()
+
 def cleanup():
     print("Running cleanup...")
 
-    now = datetime.now(timezone.utc)
+    try:
+        now = firestore.Timestamp.now()
 
-    docs = (
-        db.collection_group('chat_history')   # IMPORTANT
-        .where("expiry", "<=", now)
-        .stream()
-    )
+        docs = (
+            db.collection_group("chat_history")
+            .where("expiry", "<=", now)
+            .stream()
+        )
 
-    batch = db.batch()
-    count = 0
-    deleted = 0
+        batch = db.batch()
+        count = 0
+        deleted = 0
 
-    for doc in docs:
-        print("Deleting:", doc.reference.path)
+        for doc in docs:
+            print("Deleting:", doc.reference.path)
 
-        batch.delete(doc.reference)
-        count += 1
-        deleted += 1
+            batch.delete(doc.reference)
+            count += 1
+            deleted += 1
 
-        # Firestore batch safety limit
-        if count == 450:
+            if count == 450:
+                batch.commit()
+                batch = db.batch()
+                count = 0
+
+        if count > 0:
             batch.commit()
-            batch = db.batch()
-            count = 0
 
-    if count > 0:
-        batch.commit()
+        print(f"Cleanup completed. Deleted {deleted} messages")
 
-    print(f"Cleanup completed. Deleted {deleted} messages")
+    except Exception as e:
+        print("Cleanup error:", e)
 
-# 🔁 Background loop (runs every 5 minutes)
+
 def background_worker():
+    print("Background worker started")
+
     while True:
-        try:
-            cleanup()
-        except Exception as e:
-            print("Cleanup error:", e)
-
-        time.sleep(300)  # 300 sec = 5 minutes
+        cleanup()
+        time.sleep(300)
 
 
-# 🚀 Start background thread when server starts
-def start_worker():
-    thread = threading.Thread(target=background_worker)
-    thread.daemon = True
-    thread.start()
+def start_worker_once():
+    global worker_started
 
-start_worker()
+    with worker_lock:
+        if not worker_started:
+            print("Starting background worker...")
+            thread = threading.Thread(target=background_worker)
+            thread.daemon = True
+            thread.start()
+            worker_started = True
 
-# 🌐 Required route (Render needs an HTTP endpoint)
+
+@app.before_request
+def init_worker():
+    start_worker_once()
+
+
 @app.route("/")
 def home():
-    return jsonify({"status": "Flask cleanup worker running"})
+    return jsonify({"status": "cleanup worker running"})
