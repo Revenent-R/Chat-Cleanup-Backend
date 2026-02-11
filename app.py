@@ -78,7 +78,6 @@ def cleanup():
 
             if safeKey:
                 affected_chats.add(safeKey)
-            affected_chats.add(safeKey)
 
             batch.delete(doc.reference)
             count += 1
