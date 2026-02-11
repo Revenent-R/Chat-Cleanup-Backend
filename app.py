@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 app = Flask(__name__)
 
 # 🔐 Firebase Init
-cred = credentials.Certificate("serviceAccount.json")
+cred = credentials.Certificate("/etc/secrets/serviceAccount.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
