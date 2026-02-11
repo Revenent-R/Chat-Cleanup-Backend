@@ -14,6 +14,42 @@ db = firestore.client()
 worker_started = False
 worker_lock = threading.Lock()
 
+def update_last_message_for_chat(safeKey):
+    try:
+        chat_ref = db.collection("chats").document(safeKey)
+
+        # ✅ Python SDK uses string direction
+        latest = (
+            chat_ref.collection("chat_history")
+            .order_by("time", direction="DESCENDING")
+            .limit(1)
+            .stream()
+        )
+
+        new_message = ""
+        new_time = ""
+
+        latest_list = list(latest)
+        if len(latest_list) > 0:
+            data = latest_list[0].to_dict()
+            new_message = data.get("message", "")
+            new_time = data.get("time", "")
+
+        details = chat_ref.collection("chat_detail").stream()
+
+        batch = db.batch()
+        for d in details:
+            batch.update(d.reference, {
+                "message": new_message,
+                "time": new_time
+            })
+
+        batch.commit()
+        print(f"Updated last message for chat {safeKey}")
+
+    except Exception as e:
+        print("update_last_message_for_chat error:", e)
+
 def cleanup():
     print("Running cleanup...")
 
@@ -30,8 +66,19 @@ def cleanup():
         count = 0
         deleted = 0
 
+        affected_chats = set()
+
         for doc in docs:
             print("Deleting:", doc.reference.path)
+
+            # chats/{safeKey}/chat_history/{msgId}
+            history_ref = doc.reference.parent
+            chat_doc_ref = history_ref.parent
+            safeKey = chat_doc_ref.id if chat_doc_ref else None
+
+            if safeKey:
+                affected_chats.add(safeKey)
+            affected_chats.add(safeKey)
 
             batch.delete(doc.reference)
             count += 1
@@ -41,6 +88,13 @@ def cleanup():
                 batch.commit()
                 batch = db.batch()
                 count = 0
+
+        if count > 0:
+            batch.commit()
+
+        # 🔥 AFTER DELETIONS → update last messages
+        for safeKey in affected_chats:
+            update_last_message_for_chat(safeKey)
 
         if count > 0:
             batch.commit()
