@@ -11,8 +11,8 @@ def cleanup():
     now = datetime.now(timezone.utc)
 
     docs = (
-        db.collection("messages")
-        .where("expiresAt", "<=", now)
+        db.collection('chat_history')
+        .where("expiry", "<=", now)
         .stream()
     )
 
@@ -20,6 +20,7 @@ def cleanup():
     count = 0
 
     for doc in docs:
+        print("Deleting:", doc.reference.path)
         batch.delete(doc.reference)
         count += 1
 
