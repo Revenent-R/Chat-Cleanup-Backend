@@ -28,12 +28,14 @@ def update_last_message_for_chat(safeKey):
 
         new_message = ""
         new_time = ""
+        isfile = False
 
         latest_list = list(latest)
         if len(latest_list) > 0:
             data = latest_list[0].to_dict()
             new_message = data.get("message", "")
             new_time = data.get("timeStamp", "")
+            isfile = data.get("isFile", False)
 
         details = chat_ref.collection("chat_detail").stream()
 
@@ -41,7 +43,8 @@ def update_last_message_for_chat(safeKey):
         for d in details:
             batch.update(d.reference, {
                 "message": new_message,
-                "time": new_time
+                "time": new_time,
+                'IconAttachment' : "Icons.attachment_outlined" if isfile else ''
             })
 
         batch.commit()
