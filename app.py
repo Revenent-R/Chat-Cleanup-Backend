@@ -92,7 +92,6 @@ def cleanup():
         if count > 0:
             batch.commit()
 
-        # 🔥 AFTER DELETIONS → update last messages
         for safeKey in affected_chats:
             update_last_message_for_chat(safeKey)
 
