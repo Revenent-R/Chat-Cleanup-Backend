@@ -3,7 +3,7 @@ import threading
 from flask import Flask, jsonify
 import firebase_admin
 from firebase_admin import credentials, firestore
-from datetime import datetime,timezone
+from datetime import datetime, timezone
 
 app = Flask(__name__)
 
@@ -18,7 +18,6 @@ def update_last_message_for_chat(safeKey):
     try:
         chat_ref = db.collection("chats").document(safeKey)
 
-        # ✅ Python SDK uses string direction
         latest = (
             chat_ref.collection("chat_history")
             .order_by("time", direction="DESCENDING")
@@ -44,7 +43,7 @@ def update_last_message_for_chat(safeKey):
             batch.update(d.reference, {
                 "message": new_message,
                 "time": new_time,
-                'IconAttachment' : "Icons.attachment_outlined" if isfile else ''
+                'IconAttachment': "Icons.attachment_outlined" if isfile else ''
             })
 
         batch.commit()
@@ -74,7 +73,6 @@ def cleanup():
         for doc in docs:
             print("Deleting:", doc.reference.path)
 
-            # chats/{safeKey}/chat_history/{msgId}
             history_ref = doc.reference.parent
             chat_doc_ref = history_ref.parent
             safeKey = chat_doc_ref.id if chat_doc_ref else None
@@ -105,14 +103,12 @@ def cleanup():
     except Exception as e:
         print("Cleanup error:", e)
 
-
 def background_worker():
     print("Background worker started")
 
     while True:
         cleanup()
         time.sleep(300)
-
 
 def start_worker_once():
     global worker_started
@@ -125,11 +121,9 @@ def start_worker_once():
             thread.start()
             worker_started = True
 
-
 @app.before_request
 def init_worker():
     start_worker_once()
-
 
 @app.route("/")
 def home():

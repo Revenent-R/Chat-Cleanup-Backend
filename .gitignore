@@ -1,13 +1,15 @@
-# Firebase Admin Key
+
 serviceAccount.json
 
-# Python cache
+
 __pycache__/
 *.pyc
 
-# Env files
+et --hard eaa46f8
+
+
 .env
 
-# Mac/Windows junk
+
 .DS_Store
 Thumbs.db
